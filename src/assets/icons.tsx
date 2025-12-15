@@ -33,34 +33,97 @@ export const EthereumIcon = ({ className }: IconProps) => (
 
 export const EURIcon = ({ className }: IconProps) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn(className)}>
-        <title>Euro icon</title>
-        <circle cx="12" cy="12" r="12" fill="#1E3A8A" />
-        <path
-            d="M15.8 8.2c-.7-.8-1.8-1.2-3-1.2-2 0-3.6 1.2-4.2 3H6.5v1.2h1.9c0 .2-.1.4-.1.6s0 .4.1.6H6.5v1.2h2.1c.6 1.8 2.2 3 4.2 3 1.2 0 2.3-.4 3-.9v-1.5c-.7.6-1.6 1-2.6 1-1.3 0-2.4-.7-2.9-1.6h3.4v-1.2h-3.8c0-.2-.1-.4-.1-.6s0-.4.1-.6h3.8V10H10.9c.5-.9 1.6-1.6 2.9-1.6 1 0 1.9.4 2.6 1V8.2Z"
-            fill="#FACC15"
-        />
+        <title>Euro flag icon</title>
+        <circle cx="12" cy="12" r="12" fill="#003399" />
+        <g fill="#FFCC00">
+            <circle cx="12" cy="4" r="0.8" />
+            <circle cx="15.5" cy="5.2" r="0.8" />
+            <circle cx="17.8" cy="8" r="0.8" />
+            <circle cx="17.8" cy="12" r="0.8" />
+            <circle cx="17.8" cy="16" r="0.8" />
+            <circle cx="15.5" cy="18.8" r="0.8" />
+            <circle cx="12" cy="20" r="0.8" />
+            <circle cx="8.5" cy="18.8" r="0.8" />
+            <circle cx="6.2" cy="16" r="0.8" />
+            <circle cx="6.2" cy="12" r="0.8" />
+            <circle cx="6.2" cy="8" r="0.8" />
+            <circle cx="8.5" cy="5.2" r="0.8" />
+        </g>
     </svg>
 );
 
 export const USDIcon = ({ className }: IconProps) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn(className)}>
-        <title>US dollar icon</title>
-        <circle cx="12" cy="12" r="12" fill="#16A34A" />
-        <path
-            d="M12.9 6.2h-1.8v1.1c-1.6.2-2.8 1.1-2.8 2.6 0 1.6 1.1 2.3 2.8 2.7v2.5c-.6-.1-1.2-.4-1.8-.9v1.6c.5.4 1.1.7 1.8.8v1.2h1.8v-1.2c1.6-.2 2.8-1.1 2.8-2.6 0-1.7-1.1-2.4-2.8-2.8V9c.6.1 1.2.4 1.7.9V8.3c-.5-.4-1.1-.7-1.7-.8V6.2Zm-1.8 3v2.2c-.6-.3-.9-.7-.9-1.1 0-.5.3-.9.9-1.1Zm1.8 3.6c.6.2.9.6.9 1.2 0 .5-.3.9-.9 1.1v-2.3Z"
-            fill="white"
-        />
+        <title>US dollar flag icon</title>
+        <defs>
+            <clipPath id="clip-us-flag">
+                <circle cx="12" cy="12" r="12" />
+            </clipPath>
+        </defs>
+        <g clipPath="url(#clip-us-flag)">
+            <rect x="0" y="0" width="24" height="24" fill="#B22234" />
+            {/* white stripes */}
+            <rect x="0" y="3" width="24" height="1.5" fill="#FFFFFF" />
+            <rect x="0" y="6" width="24" height="1.5" fill="#FFFFFF" />
+            <rect x="0" y="9" width="24" height="1.5" fill="#FFFFFF" />
+            <rect x="0" y="12" width="24" height="1.5" fill="#FFFFFF" />
+            <rect x="0" y="15" width="24" height="1.5" fill="#FFFFFF" />
+            <rect x="0" y="18" width="24" height="1.5" fill="#FFFFFF" />
+            {/* blue canton */}
+            <rect x="0" y="0" width="10" height="9" fill="#3C3B6E" />
+            {/* simple stars */}
+            <g fill="#FFFFFF">
+                <circle cx="2" cy="2" r="0.5" />
+                <circle cx="4" cy="3.5" r="0.5" />
+                <circle cx="6" cy="2" r="0.5" />
+                <circle cx="8" cy="3.5" r="0.5" />
+                <circle cx="2" cy="5" r="0.5" />
+                <circle cx="4" cy="6.5" r="0.5" />
+                <circle cx="6" cy="5" r="0.5" />
+                <circle cx="8" cy="6.5" r="0.5" />
+            </g>
+        </g>
     </svg>
 );
 
 export const GBPIcon = ({ className }: IconProps) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn(className)}>
-        <title>British pound icon</title>
-        <circle cx="12" cy="12" r="12" fill="#7C3AED" />
-        <path
-            d="M13.8 7.2c-.4-.3-1-.4-1.6-.4-1.5 0-2.6 1-2.6 2.6 0 .4.1.9.2 1.3H8.5v1.3H10c-.1.3-.2.6-.2.9 0 .4.1.8.3 1.2H8.5v1.3h6.9v-1.3h-3.5c-.2-.3-.3-.7-.3-1.1 0-.3.1-.6.2-.9h2.1v-1.3h-2.6c-.1-.4-.2-.8-.2-1.2 0-.8.5-1.3 1.2-1.3.5 0 .9.2 1.2.5V7.2Z"
-            fill="white"
-        />
+        <title>British pound flag icon</title>
+        <defs>
+            <clipPath id="clip-gb-flag">
+                <circle cx="12" cy="12" r="12" />
+            </clipPath>
+        </defs>
+        <g clipPath="url(#clip-gb-flag)">
+            <rect x="0" y="0" width="24" height="24" fill="#012169" />
+            {/* white cross */}
+            <rect x="10" y="0" width="4" height="24" fill="#FFFFFF" />
+            <rect x="0" y="10" width="24" height="4" fill="#FFFFFF" />
+            {/* red cross */}
+            <rect x="11" y="0" width="2" height="24" fill="#C8102E" />
+            <rect x="0" y="11" width="24" height="2" fill="#C8102E" />
+        </g>
+    </svg>
+);
+
+export const GHSIcon = ({ className }: IconProps) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn(className)}>
+        <title>Ghanaian cedi flag icon</title>
+        <defs>
+            <clipPath id="clip-ghs-flag">
+                <circle cx="12" cy="12" r="12" />
+            </clipPath>
+        </defs>
+        <g clipPath="url(#clip-ghs-flag)">
+            <rect x="0" y="0" width="24" height="8" fill="#CE1126" />
+            <rect x="0" y="8" width="24" height="8" fill="#FCD116" />
+            <rect x="0" y="16" width="24" height="8" fill="#006B3F" />
+            {/* black star */}
+            <path
+                d="M12 8.5L13.08 11.2H16L13.62 12.9L14.54 15.5L12 13.92L9.46 15.5L10.38 12.9L8 11.2H10.92L12 8.5Z"
+                fill="#000000"
+            />
+        </g>
     </svg>
 );
 

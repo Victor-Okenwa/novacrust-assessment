@@ -2,46 +2,64 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { CRYPTO_TOKENS, FIAT_TOKENS, type CryptoTokenType } from "~/lib/constants";
+import { CRYPTO_TOKENS, FIAT_TOKENS, type CryptoTokenType, type FiatTokenType } from "~/lib/constants";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { CurrencyInput } from "./ui/currency-input";
-import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
-import { Button } from "./ui/button";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "./ui/command";
-import { CheckIcon, ChevronDown, ChevronsDown } from "lucide-react";
-import { cn } from "~/lib/utils";
-import { BnbIcon, CeloIcon, EthereumIcon, TonIcon, } from "~/assets/icons";
-import { useState } from "react";
+import { TokenCombobox, type TokenOption } from "./ui/token-combobox";
+import { BnbIcon, CeloIcon, EthereumIcon, EURIcon, GBPIcon, GHSIcon, NGNIcon, TonIcon, USDIcon } from "~/assets/icons";
+import { useEffect } from "react";
 
-const cryptoTokens = [
+const cryptoTokens: TokenOption[] = [
     {
         value: "ETH",
-        label: "ETH",
+        label: "USDT - ETH",
         icon: <EthereumIcon />,
     },
     {
         value: "TON",
-        label: "TON",
+        label: "USDT - TON",
         icon: <TonIcon />,
     },
     {
         value: "CELO",
-        label: "CELO",
+        label: "USDT - CELO",
         icon: <CeloIcon />,
     },
     {
         value: "BNB",
-        label: "BNB",
+        label: "USDT - BNB",
         icon: <BnbIcon />,
     },
 ];
 
-const fiatTokens = FIAT_TOKENS.map((token) => ({
-    value: token,
-    label: token,
-}));
-
+const fiatTokens: TokenOption[] = [
+    {
+        value: "NGN",
+        label: "NGN",
+        icon: <NGNIcon />,
+    },
+    {
+        value: "USD",
+        label: "USD",
+        icon: <USDIcon />,
+    },
+    {
+        value: "EUR",
+        label: "EUR",
+        icon: <EURIcon />,
+    },
+    {
+        value: "GBP",
+        label: "GBP",
+        icon: <GBPIcon />,
+    },
+    {
+        value: "GHS",
+        label: "GHS",
+        icon: <GHSIcon />,
+    },
+];
 const CryptoTokenSchema = z.enum(CRYPTO_TOKENS);
 const FiatTokenSchema = z.enum(FIAT_TOKENS);
 const PayAmountSchema = z.object({
@@ -84,7 +102,6 @@ const FormSchema = z.object({
 type FormSchemaType = z.infer<typeof FormSchema>;
 
 export function CashToCryptoTab() {
-    const [isCryptoTokenOpen, setIsCryptoTokenOpen] = useState(false);
     const form = useForm<FormSchemaType>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
@@ -105,6 +122,29 @@ export function CashToCryptoTab() {
         },
     });
 
+
+    useEffect(() => {
+        const amount = Number(form.watch("pay.amount"));
+        const token = form.watch("pay.token");
+        const receiveToken = form.watch("receive.token");
+
+        if (!amount || !token || !receiveToken) return;
+
+        const fetchConversion = async () => {
+            try {
+                const response = await fetch(
+                    `https://api.coingecko.com/api/v3/simple/price?ids=${token.toLowerCase()}&vs_currencies=${receiveToken.toLowerCase()}`
+                );
+                const data = await response.json();
+                console.log(data[token.toLowerCase()][receiveToken.toLowerCase()] * Number(amount));
+                form.setValue("receive.amount", (data[token.toLowerCase()][receiveToken.toLowerCase()] * Number(amount)).toString());
+            } catch (error) {
+                console.error("Error fetching conversion:", error);
+                form.setValue("receive.amount", "0.00");
+            }
+        };
+        fetchConversion();
+    }, [form.watch("pay.amount"), form.watch("pay.token"), form.watch("receive.token")]);
     const onSubmit = (data: FormSchemaType) => {
         console.log(data);
     };
@@ -112,7 +152,7 @@ export function CashToCryptoTab() {
     return (
         <div className="min-w-xs">
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
                     <Card className="gap-0">
                         <CardHeader className="py-0! gap-0">
@@ -139,62 +179,54 @@ export function CashToCryptoTab() {
                                 )}
                             />
 
-                            <Popover open={isCryptoTokenOpen} onOpenChange={setIsCryptoTokenOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="secondary" role="combobox" className="justify-between rounded-full text-primary">
-                                        {(() => {
-                                            const current = form.watch("pay.token");
-                                            const token = cryptoTokens.find(
-                                                (t) => t.value.toLowerCase() === current.toLowerCase(),
-                                            );
-                                            if (!token) return null;
-                                            return (
-                                                <div className="flex items-center gap-1 flex-1 [&>svg]:size-5">
-                                                    {token.icon}
-                                                    <span className="text-sm font-medium">{token.label}</span>
-                                                </div>
-                                            );
-                                        })()}
-                                        <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-fit p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Search framework..." />
-                                        <CommandList>
-                                            <CommandEmpty>No framework found.</CommandEmpty>
-                                            <CommandGroup>
-                                                {cryptoTokens.map((token) => (
-                                                    <CommandItem
-                                                        key={token.value}
-                                                        value={token.value}
-                                                        onSelect={(currentValue) => {
-                                                            form.setValue("pay.token", currentValue as CryptoTokenType);
-                                                            setIsCryptoTokenOpen(false)
-                                                        }}
-                                                    >
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            {token.icon}
-                                                            {token.label}
-                                                        </div>
-                                                        <CheckIcon
-                                                            className={cn(
-                                                                "mr-2 h-4 w-4",
-                                                                form.watch("pay.token") === token.value ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                        />
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                            <TokenCombobox
+                                value={form.watch("pay.token")}
+                                onChange={(val) => form.setValue("pay.token", val as CryptoTokenType)}
+                                options={cryptoTokens}
+                                placeholder="Select token"
+                            />
+
+                        </CardContent>
+                    </Card>
+
+                    <Card className="gap-0">
+                        <CardHeader className="py-0! gap-0">
+                            <CardTitle className="text-base text-muted-foreground font-light">You receive</CardTitle>
+                            <CardDescription className="sr-only hidden">Enter the amount you want to  and the token you want to pay with.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-row py-0">
+
+
+                            <FormField
+                                control={form.control}
+                                name="receive.amount"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel />
+                                        <FormControl>
+                                            <CurrencyInput
+                                                placeholder="0.00"
+                                                readOnly
+                                                value={form.watch("receive.amount") ?? field.value}
+                                                className="p-0 border-none bg-transparent font-semibold text-xl focus-visible:outline-none focus-visible:border-b focus-visible:border-current w-auto focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:shadow-none shadow-none"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <TokenCombobox
+                                value={form.watch("receive.token")}
+                                onChange={(val) => form.setValue("receive.token", val as FiatTokenType)}
+                                options={fiatTokens}
+                                placeholder="Select token"
+                            />
 
                         </CardContent>
                     </Card>
                 </form>
             </Form>
-        </div>
+        </div >
     );
 }

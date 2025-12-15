@@ -20,8 +20,10 @@ export function CurrencyInput({ className, onChange, ...props }: CurrencyInputPr
                 if (Number.isNaN(numeric)) {
                     return;
                 }
-                const formatted = numeric.toLocaleString("en-US", {
-                    minimumFractionDigits: 0,
+                // Round to 2 decimal places before formatting
+                const rounded = Math.round(numeric * 100) / 100;
+                const formatted = rounded.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
 
