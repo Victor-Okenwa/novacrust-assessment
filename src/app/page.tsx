@@ -1,36 +1,29 @@
-import Link from "next/link";
+import { CashToCryptoTab } from "~/components/cash-to-crypto-tab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export default function HomePage() {
 	return (
-		<main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-			<div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-				<h1 className="font-extrabold text-5xl text-white tracking-tight sm:text-[5rem]">
-					Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-				</h1>
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-					<Link
-						className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-						href="https://create.t3.gg/en/usage/first-steps"
-						target="_blank"
-					>
-						<h3 className="font-bold text-2xl">First Steps →</h3>
-						<div className="text-lg">
-							Just the basics - Everything you need to know to set up your
-							database and authentication.
-						</div>
-					</Link>
-					<Link
-						className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-						href="https://create.t3.gg/en/introduction"
-						target="_blank"
-					>
-						<h3 className="font-bold text-2xl">Documentation →</h3>
-						<div className="text-lg">
-							Learn more about Create T3 App, the libraries it uses, and how to
-							deploy it.
-						</div>
-					</Link>
-				</div>
+		<main className="min-h-screen">
+
+			<div className="py-5 px-2">
+				<Tabs defaultValue="crypto-to-cash" className="max-w-lg col-span-3">
+					<TabsList className="w-full max-w-sm *:text-sm h-fit *:py-2 mx-auto">
+						<TabsTrigger value="crypto-to-cash">Crypto to cash</TabsTrigger>
+						<TabsTrigger value="cash-to-crypto">Cash to crypto</TabsTrigger>
+						<TabsTrigger value="cash-to-fiat-loan">Cash to fiat loan</TabsTrigger>
+					</TabsList>
+
+					<TabsContent value="crypto-to-cash" className="mx-auto max-w-lg">
+						<CashToCryptoTab />
+					</TabsContent>
+
+					<TabsContent value="cash-to-crypto">Change your password here.</TabsContent>
+					<TabsContent value="cash-to-fiat-loan">Change your password here.</TabsContent>
+				</Tabs>
+			</div>
+
+			<div className="col-span-2">
+				<h1>Hello</h1>
 			</div>
 		</main>
 	);
