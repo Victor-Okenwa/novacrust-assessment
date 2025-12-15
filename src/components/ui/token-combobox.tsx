@@ -13,6 +13,7 @@ import {
 } from "./command";
 import { CheckIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import type { ClassValue } from "class-variance-authority/types";
 
 export type TokenOption = {
     value: string;
@@ -25,14 +26,17 @@ type TokenComboboxProps = {
     onChange: (value: string) => void;
     options: TokenOption[];
     placeholder?: string;
+    withoutSearch?: boolean;
+    className?: ClassValue;
+    containerClassName?: ClassValue;
 };
 
-export function TokenCombobox({ value, onChange, options, placeholder = "Select token" }: TokenComboboxProps) {
+export function TokenCombobox({ value, onChange, options, placeholder = "Select token", withoutSearch = false, className = "", containerClassName = "" }: TokenComboboxProps) {
     const [open, setOpen] = React.useState(false);
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+        <Popover open={open} onOpenChange={setOpen} >
+            <PopoverTrigger asChild className={cn(className)}>
                 <Button variant="secondary" role="combobox" className="justify-between rounded-full text-primary">
                     {(() => {
                         const current = value;
@@ -50,11 +54,13 @@ export function TokenCombobox({ value, onChange, options, placeholder = "Select 
                     <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-fit p-0">
+            <PopoverContent className={cn("w-fit p-0", containerClassName)}>
                 <Command>
-                    <CommandInput placeholder="Search token..." />
+                    {!withoutSearch && <CommandInput placeholder="Search token..." />}
                     <CommandList>
-                        <CommandEmpty>No token found.</CommandEmpty>
+                        {!withoutSearch && (
+                            <CommandEmpty>No token found.</CommandEmpty>
+                        )}
                         <CommandGroup>
                             {options
                                 .filter((token) => token.value.toLowerCase() !== value.toLowerCase())

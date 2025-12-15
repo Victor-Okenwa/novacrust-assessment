@@ -7,8 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { CurrencyInput } from "./ui/currency-input";
 import { TokenCombobox, type TokenOption } from "./ui/token-combobox";
-import { BnbIcon, CeloIcon, EthereumIcon, EURIcon, GBPIcon, GHSIcon, NGNIcon, TonIcon, USDIcon } from "~/assets/icons";
-import { useEffect } from "react";
+import { BnbIcon, CeloIcon, EthereumIcon, EURIcon, GBPIcon, GHSIcon, MetamaskIcon, NGNIcon, RainbowIcon, TonIcon, USDIcon, WalletConnectIcon } from "~/assets/icons";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Spinner } from "./ui/spinner";
+import { Select, SelectTrigger } from "./ui/select";
+import { LandmarkIcon, WalletMinimal, WalletMinimalIcon } from "lucide-react";
 
 const cryptoTokens: TokenOption[] = [
     {
@@ -58,6 +62,37 @@ const fiatTokens: TokenOption[] = [
         value: "GHS",
         label: "GHS",
         icon: <GHSIcon />,
+    },
+];
+
+const WalletOptions = [
+    {
+        value: "metamask",
+        label: "Metamask",
+        icon: <MetamaskIcon />,
+    },
+    {
+        value: "rainbow",
+        label: "Rainbow",
+        icon: <RainbowIcon />,
+    },
+    {
+        value: "walletconnect",
+        label: "WalletConnect",
+        icon: <WalletConnectIcon />,
+    },
+    {
+        value: "other",
+        label: "Other Crypto Wallets (Binance, Coinbase, Bybit etc)",
+        icon: <WalletMinimalIcon />,
+    }
+];
+
+const DestinationOptions: TokenOption[] = [
+    {
+        value: "bank",
+        label: "Bank",
+        icon: <LandmarkIcon />,
     },
 ];
 const CryptoTokenSchema = z.enum(CRYPTO_TOKENS);
@@ -122,6 +157,7 @@ export function CashToCryptoTab() {
         },
     });
 
+    const [isConversionLoading, setIsConversionLoading] = useState(false);
 
     useEffect(() => {
         const amount = Number(form.watch("pay.amount"));
@@ -130,20 +166,39 @@ export function CashToCryptoTab() {
 
         if (!amount || !token || !receiveToken) return;
 
-        const fetchConversion = async () => {
-            try {
-                const response = await fetch(
-                    `https://api.coingecko.com/api/v3/simple/price?ids=${token.toLowerCase()}&vs_currencies=${receiveToken.toLowerCase()}`
-                );
-                const data = await response.json();
-                console.log(data[token.toLowerCase()][receiveToken.toLowerCase()] * Number(amount));
-                form.setValue("receive.amount", (data[token.toLowerCase()][receiveToken.toLowerCase()] * Number(amount)).toString());
-            } catch (error) {
-                console.error("Error fetching conversion:", error);
-                form.setValue("receive.amount", "0.00");
-            }
+        function normalizeTokenForSearch(token: string) {
+            if (token === "ETH") return "ethereum";
+            if (token === "TON") return "ton";
+            if (token === "CELO") return "celo";
+            if (token === "BNB") return "binancecoin";
+            return token.toLowerCase();
+        }
+
+        const timeoutId = setTimeout(() => {
+            const fetchConversion = async () => {
+                try {
+                    setIsConversionLoading(true);
+                    const res = await fetch(
+                        `/api/crypto-price?crypto=${normalizeTokenForSearch(token)}&fiat=${normalizeTokenForSearch(receiveToken)}`
+                    );
+                    const data = await res.json();
+                    const rate = data[token.toLowerCase()][receiveToken.toLowerCase()];
+                    form.setValue("receive.amount", (rate * amount).toString());
+                } catch (error) {
+                    console.error("Error fetching conversion:", error);
+                    toast.error("Error fetching conversion");
+                    form.setValue("receive.amount", "0.00");
+                } finally {
+                    setIsConversionLoading(false);
+                }
+            };
+
+            fetchConversion();
+        }, 500);
+
+        return () => {
+            clearTimeout(timeoutId);
         };
-        fetchConversion();
     }, [form.watch("pay.amount"), form.watch("pay.token"), form.watch("receive.token")]);
     const onSubmit = (data: FormSchemaType) => {
         console.log(data);
@@ -152,7 +207,7 @@ export function CashToCryptoTab() {
     return (
         <div className="min-w-xs">
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
                     <Card className="gap-0">
                         <CardHeader className="py-0! gap-0">
@@ -195,26 +250,29 @@ export function CashToCryptoTab() {
                             <CardDescription className="sr-only hidden">Enter the amount you want to  and the token you want to pay with.</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-row py-0">
-
-
-                            <FormField
-                                control={form.control}
-                                name="receive.amount"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel />
-                                        <FormControl>
-                                            <CurrencyInput
-                                                placeholder="0.00"
-                                                readOnly
-                                                value={form.watch("receive.amount") ?? field.value}
-                                                className="p-0 border-none bg-transparent font-semibold text-xl focus-visible:outline-none focus-visible:border-b focus-visible:border-current w-auto focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:shadow-none shadow-none"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                            <div className="relative">
+                                {isConversionLoading && (
+                                    <Spinner className="absolute top-[35%] left-1/2 -translate-x-1/2" />
                                 )}
-                            />
+                                <FormField
+                                    control={form.control}
+                                    name="receive.amount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel />
+                                            <FormControl>
+                                                <CurrencyInput
+                                                    placeholder="0.00"
+                                                    readOnly
+                                                    value={form.watch("receive.amount") ?? field.value}
+                                                    className="p-0 border-none bg-transparent font-semibold text-xl focus-visible:outline-none focus-visible:border-b focus-visible:border-current w-auto focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:shadow-none shadow-none"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <TokenCombobox
                                 value={form.watch("receive.token")}
@@ -225,6 +283,26 @@ export function CashToCryptoTab() {
 
                         </CardContent>
                     </Card>
+
+                    <FormField control={form.control} name="payFrom.wallet" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-sm text-primary font-medium">Pay from</FormLabel>
+                            <FormControl>
+                                <TokenCombobox withoutSearch={true} value={field.value} onChange={(val) => field.onChange(val)} options={WalletOptions} placeholder="Select wallet" className="w-full capitalize py-6 text-primary! border-primary/20! border! bg-background" containerClassName="w-full! min-w-sm rounded-xl! overflow-hidden" />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+
+                    <FormField control={form.control} name="payTo.destination" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-sm text-primary font-medium">Pay to</FormLabel>
+                            <FormControl>
+                                <TokenCombobox withoutSearch={true} value={field.value} onChange={(val) => field.onChange(val)} options={DestinationOptions} placeholder="Select destination" className="w-full capitalize py-6 text-primary! border-primary/20! border! bg-background" containerClassName="w-full! min-w-sm rounded-xl! overflow-hidden" />
+                            </FormControl>
+                        </FormItem>
+                    )} />
+
+
                 </form>
             </Form>
         </div >
