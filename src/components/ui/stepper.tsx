@@ -1,14 +1,10 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import { Slot } from "@radix-ui/react-slot";
 import { Check } from "lucide-react";
 import * as React from "react";
 import { useComposedRefs } from "~/lib/compose-refs";
 import { cn } from "~/lib/utils";
-import { useAsRef } from "~/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "~/hooks/use-isomorphic-layout-effect";
-import { useLazyRef } from "~/hooks/use-lazy-ref";
 
 const ROOT_NAME = "Stepper";
 const LIST_NAME = "StepperList";
@@ -45,7 +41,7 @@ type TriggerElement = React.ComponentRef<typeof StepperTrigger>;
 function getId(
   id: string,
   variant: "trigger" | "content" | "title" | "description",
-  value: string,
+  value: string
 ) {
   return `${id}-${variant}-${value}`;
 }
@@ -75,19 +71,19 @@ function getDirectionAwareKey(key: string, dir?: Direction) {
 function getFocusIntent(
   event: React.KeyboardEvent<TriggerElement>,
   dir?: Direction,
-  orientation?: Orientation,
+  orientation?: Orientation
 ) {
   const key = getDirectionAwareKey(event.key, dir);
   if (orientation === "horizontal" && ["ArrowUp", "ArrowDown"].includes(key))
-    return undefined;
+    return;
   if (orientation === "vertical" && ["ArrowLeft", "ArrowRight"].includes(key))
-    return undefined;
+    return;
   return MAP_KEY_TO_FOCUS_INTENT[key];
 }
 
 function focusFirst(
   candidates: React.RefObject<TriggerElement | null>[],
-  preventScroll = false,
+  preventScroll = false
 ) {
   const PREVIOUSLY_FOCUSED_ELEMENT = document.activeElement;
   for (const candidateRef of candidates) {
@@ -101,8 +97,31 @@ function focusFirst(
 
 function wrapArray<T>(array: T[], startIndex: number) {
   return array.map<T>(
-    (_, index) => array[(startIndex + index) % array.length] as T,
+    (_, index) => array[(startIndex + index) % array.length] as T
   );
+}
+
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+
+function useAsRef<T>(props: T) {
+  const ref = React.useRef<T>(props);
+
+  useIsomorphicLayoutEffect(() => {
+    ref.current = props;
+  });
+
+  return ref;
+}
+
+function useLazyRef<T>(fn: () => T) {
+  const ref = React.useRef<T | null>(null);
+
+  if (ref.current === null) {
+    ref.current = fn();
+  }
+
+  return ref as React.RefObject<T>;
 }
 
 function getDataState(
@@ -110,7 +129,7 @@ function getDataState(
   itemValue: string,
   stepState: StepState | undefined,
   steps: Map<string, StepState>,
-  variant: "item" | "separator" = "item",
+  variant: "item" | "separator" = "item"
 ): DataState {
   const stepKeys = Array.from(steps.keys());
   const currentIndex = stepKeys.indexOf(itemValue);
@@ -130,6 +149,13 @@ function getDataState(
   return "inactive";
 }
 
+const DirectionContext = React.createContext<Direction | undefined>(undefined);
+
+function useDirection(dirProp?: Direction): Direction {
+  const contextDir = React.useContext(DirectionContext);
+  return dirProp ?? contextDir ?? "ltr";
+}
+
 interface StepState {
   value: string;
   completed: boolean;
@@ -147,7 +173,7 @@ interface Store {
   setState: <K extends keyof StoreState>(key: K, value: StoreState[K]) => void;
   setStateWithValidation: (
     value: string,
-    direction: NavigationDirection,
+    direction: NavigationDirection
   ) => Promise<boolean>;
   hasValidation: () => boolean;
   notify: () => void;
@@ -171,7 +197,7 @@ function useStore<T>(selector: (state: StoreState) => T): T {
 
   const getSnapshot = React.useCallback(
     () => selector(store.getState()),
-    [store, selector],
+    [store, selector]
   );
 
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
@@ -186,7 +212,7 @@ interface ItemData {
 }
 
 interface StepperContextValue {
-  rootId: string;
+  id: string;
   dir: Direction;
   orientation: Orientation;
   activationMode: ActivationMode;
@@ -205,7 +231,7 @@ function useStepperContext(consumerName: string) {
   return context;
 }
 
-interface StepperProps extends DivProps {
+interface StepperRootProps extends DivProps {
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
@@ -214,7 +240,7 @@ interface StepperProps extends DivProps {
   onValueRemove?: (value: string) => void;
   onValidate?: (
     value: string,
-    direction: NavigationDirection,
+    direction: NavigationDirection
   ) => boolean | Promise<boolean>;
   activationMode?: ActivationMode;
   dir?: Direction;
@@ -224,7 +250,7 @@ interface StepperProps extends DivProps {
   nonInteractive?: boolean;
 }
 
-function Stepper(props: StepperProps) {
+function StepperRoot(props: StepperRootProps) {
   const {
     value,
     defaultValue,
@@ -233,6 +259,7 @@ function Stepper(props: StepperProps) {
     onValueAdd,
     onValueRemove,
     onValidate,
+    id: idProp,
     dir: dirProp,
     orientation = "horizontal",
     activationMode = "automatic",
@@ -241,7 +268,6 @@ function Stepper(props: StepperProps) {
     nonInteractive = false,
     loop = false,
     className,
-    id,
     ...rootProps
   } = props;
 
@@ -250,7 +276,6 @@ function Stepper(props: StepperProps) {
     steps: new Map(),
     value: value ?? defaultValue ?? "",
   }));
-
   const propsRef = useAsRef({
     onValueChange,
     onValueComplete,
@@ -259,8 +284,8 @@ function Stepper(props: StepperProps) {
     onValidate,
   });
 
-  const store = React.useMemo<Store>(() => {
-    return {
+  const store: Store = React.useMemo(
+    () => ({
       subscribe: (cb) => {
         listenersRef.current.add(cb);
         return () => listenersRef.current.delete(cb);
@@ -324,23 +349,25 @@ function Stepper(props: StepperProps) {
           cb();
         }
       },
-    };
-  }, [listenersRef, stateRef, propsRef]);
+    }),
+    [listenersRef, stateRef, propsRef]
+  );
 
   useIsomorphicLayoutEffect(() => {
     if (value !== undefined) {
       store.setState("value", value);
     }
-  }, [value]);
+  }, [value, store]);
 
   const dir = useDirection(dirProp);
 
-  const instanceId = React.useId();
-  const rootId = id ?? instanceId;
+  const id = React.useId();
+
+  const rootId = idProp ?? id;
 
   const contextValue = React.useMemo<StepperContextValue>(
     () => ({
-      rootId,
+      id: rootId,
       dir,
       orientation,
       activationMode,
@@ -348,7 +375,7 @@ function Stepper(props: StepperProps) {
       nonInteractive,
       loop,
     }),
-    [rootId, dir, orientation, activationMode, disabled, nonInteractive, loop],
+    [rootId, dir, orientation, activationMode, disabled, nonInteractive, loop]
   );
 
   const RootPrimitive = asChild ? Slot : "div";
@@ -357,16 +384,16 @@ function Stepper(props: StepperProps) {
     <StoreContext.Provider value={store}>
       <StepperContext.Provider value={contextValue}>
         <RootPrimitive
-          id={rootId}
           data-disabled={disabled ? "" : undefined}
           data-orientation={orientation}
           data-slot="stepper"
           dir={dir}
+          id={rootId}
           {...rootProps}
           className={cn(
             "flex gap-6",
             orientation === "horizontal" ? "w-full flex-col" : "flex-row",
-            className,
+            className
           )}
         />
       </StepperContext.Provider>
@@ -391,7 +418,7 @@ function useFocusContext(consumerName: string) {
   const context = React.useContext(FocusContext);
   if (!context) {
     throw new Error(
-      `\`${consumerName}\` must be used within \`FocusProvider\``,
+      `\`${consumerName}\` must be used within \`FocusProvider\``
     );
   }
   return context;
@@ -402,26 +429,11 @@ interface StepperListProps extends DivProps {
 }
 
 function StepperList(props: StepperListProps) {
-  const {
-    asChild,
-    onBlur: onBlurProp,
-    onFocus: onFocusProp,
-    onMouseDown: onMouseDownProp,
-    className,
-    children,
-    ref,
-    ...listProps
-  } = props;
+  const { className, children, asChild, ref, ...listProps } = props;
 
   const context = useStepperContext(LIST_NAME);
   const orientation = context.orientation;
   const currentValue = useStore((state) => state.value);
-
-  const propsRef = useAsRef({
-    onBlur: onBlurProp,
-    onFocus: onFocusProp,
-    onMouseDown: onMouseDownProp,
-  });
 
   const [tabStopId, setTabStopId] = React.useState<string | null>(null);
   const [isTabbingBackOut, setIsTabbingBackOut] = React.useState(false);
@@ -455,37 +467,39 @@ function StepperList(props: StepperListProps) {
     itemsRef.current.delete(id);
   }, []);
 
-  const getItems = React.useCallback(() => {
-    return Array.from(itemsRef.current.values())
-      .filter((item) => item.ref.current)
-      .sort((a, b) => {
-        const elementA = a.ref.current;
-        const elementB = b.ref.current;
-        if (!elementA || !elementB) return 0;
-        const position = elementA.compareDocumentPosition(elementB);
-        if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
-          return -1;
-        }
-        if (position & Node.DOCUMENT_POSITION_PRECEDING) {
-          return 1;
-        }
-        return 0;
-      });
-  }, []);
+  const getItems = React.useCallback(
+    () =>
+      Array.from(itemsRef.current.values())
+        .filter((item) => item.ref.current)
+        .sort((a, b) => {
+          const elementA = a.ref.current;
+          const elementB = b.ref.current;
+          if (!(elementA && elementB)) return 0;
+          const position = elementA.compareDocumentPosition(elementB);
+          if (position & Node.DOCUMENT_POSITION_FOLLOWING) {
+            return -1;
+          }
+          if (position & Node.DOCUMENT_POSITION_PRECEDING) {
+            return 1;
+          }
+          return 0;
+        }),
+    []
+  );
 
   const onBlur = React.useCallback(
     (event: React.FocusEvent<ListElement>) => {
-      propsRef.current.onBlur?.(event);
+      listProps.onBlur?.(event);
       if (event.defaultPrevented) return;
 
       setIsTabbingBackOut(false);
     },
-    [propsRef],
+    [listProps.onBlur]
   );
 
   const onFocus = React.useCallback(
     (event: React.FocusEvent<ListElement>) => {
-      propsRef.current.onFocus?.(event);
+      listProps.onFocus?.(event);
       if (event.defaultPrevented) return;
 
       const isKeyboardFocus = !isClickFocusRef.current;
@@ -499,7 +513,7 @@ function StepperList(props: StepperListProps) {
 
         if (!entryFocusEvent.defaultPrevented) {
           const items = Array.from(itemsRef.current.values()).filter(
-            (item) => !item.disabled,
+            (item) => !item.disabled
           );
           const selectedItem = currentValue
             ? items.find((item) => item.value === currentValue)
@@ -519,18 +533,18 @@ function StepperList(props: StepperListProps) {
       }
       isClickFocusRef.current = false;
     },
-    [propsRef, isTabbingBackOut, currentValue, tabStopId],
+    [listProps.onFocus, isTabbingBackOut, currentValue, tabStopId]
   );
 
   const onMouseDown = React.useCallback(
     (event: React.MouseEvent<ListElement>) => {
-      propsRef.current.onMouseDown?.(event);
+      listProps.onMouseDown?.(event);
 
       if (event.defaultPrevented) return;
 
       isClickFocusRef.current = true;
     },
-    [propsRef],
+    [listProps.onMouseDown]
   );
 
   const focusContextValue = React.useMemo<FocusContextValue>(
@@ -553,7 +567,7 @@ function StepperList(props: StepperListProps) {
       onItemRegister,
       onItemUnregister,
       getItems,
-    ],
+    ]
   );
 
   const ListPrimitive = asChild ? Slot : "div";
@@ -561,24 +575,24 @@ function StepperList(props: StepperListProps) {
   return (
     <FocusContext.Provider value={focusContextValue}>
       <ListPrimitive
-        role="tablist"
         aria-orientation={orientation}
         data-orientation={orientation}
         data-slot="stepper-list"
         dir={context.dir}
+        role="tablist"
         tabIndex={isTabbingBackOut || focusableItemCount === 0 ? -1 : 0}
         {...listProps}
-        ref={composedRef}
         className={cn(
           "flex outline-none",
           orientation === "horizontal"
             ? "flex-row items-center"
             : "flex-col items-start",
-          className,
+          className
         )}
         onBlur={onBlur}
         onFocus={onFocus}
         onMouseDown={onMouseDown}
+        ref={composedRef}
       >
         {children}
       </ListPrimitive>
@@ -592,7 +606,7 @@ interface StepperItemContextValue {
 }
 
 const StepperItemContext = React.createContext<StepperItemContextValue | null>(
-  null,
+  null
 );
 
 function useStepperItemContext(consumerName: string) {
@@ -647,7 +661,7 @@ function StepperItem(props: StepperItemProps) {
       value: itemValue,
       stepState,
     }),
-    [itemValue, stepState],
+    [itemValue, stepState]
   );
 
   const ItemPrimitive = asChild ? Slot : "div";
@@ -657,16 +671,16 @@ function StepperItem(props: StepperItemProps) {
       <ItemPrimitive
         data-disabled={stepState?.disabled ? "" : undefined}
         data-orientation={orientation}
-        data-state={dataState}
         data-slot="stepper-item"
+        data-state={dataState}
         dir={context.dir}
         {...itemProps}
-        ref={ref}
         className={cn(
           "relative flex not-last:flex-1 items-center",
           orientation === "horizontal" ? "flex-row" : "flex-col",
-          className,
+          className
         )}
+        ref={ref}
       >
         {children}
       </ItemPrimitive>
@@ -675,50 +689,31 @@ function StepperItem(props: StepperItemProps) {
 }
 
 function StepperTrigger(props: ButtonProps) {
-  const {
-    asChild,
-    onClick: onClickProp,
-    onFocus: onFocusProp,
-    onKeyDown: onKeyDownProp,
-    onMouseDown: onMouseDownProp,
-    disabled,
-    className,
-    ref,
-    ...triggerProps
-  } = props;
+  const { asChild, disabled, className, ref, ...triggerProps } = props;
 
   const context = useStepperContext(TRIGGER_NAME);
   const itemContext = useStepperItemContext(TRIGGER_NAME);
-  const itemValue = itemContext.value;
-
   const store = useStoreContext(TRIGGER_NAME);
   const focusContext = useFocusContext(TRIGGER_NAME);
   const value = useStore((state) => state.value);
-  const steps = useStore((state) => state.steps);
+  const itemValue = itemContext.value;
   const stepState = useStore((state) => state.steps.get(itemValue));
-
-  const propsRef = useAsRef({
-    onClick: onClickProp,
-    onFocus: onFocusProp,
-    onKeyDown: onKeyDownProp,
-    onMouseDown: onMouseDownProp,
-  });
-
   const activationMode = context.activationMode;
   const orientation = context.orientation;
   const loop = context.loop;
 
+  const steps = useStore((state) => state.steps);
   const stepIndex = Array.from(steps.keys()).indexOf(itemValue);
 
   const stepPosition = stepIndex + 1;
   const stepCount = steps.size;
 
-  const triggerId = getId(context.rootId, "trigger", itemValue);
-  const contentId = getId(context.rootId, "content", itemValue);
-  const titleId = getId(context.rootId, "title", itemValue);
-  const descriptionId = getId(context.rootId, "description", itemValue);
+  const triggerId = getId(context.id, "trigger", itemValue);
+  const contentId = getId(context.id, "content", itemValue);
+  const titleId = getId(context.id, "title", itemValue);
+  const descriptionId = getId(context.id, "description", itemValue);
 
-  const isDisabled = disabled || stepState?.disabled || context.disabled;
+  const isDisabled = context.disabled || stepState?.disabled || disabled;
   const isActive = value === itemValue;
   const isTabStop = focusContext.tabStopId === triggerId;
   const dataState = getDataState(value, itemValue, stepState, steps);
@@ -768,10 +763,10 @@ function StepperTrigger(props: ButtonProps) {
 
   const onClick = React.useCallback(
     async (event: React.MouseEvent<TriggerElement>) => {
-      propsRef.current.onClick?.(event);
+      triggerProps.onClick?.(event);
       if (event.defaultPrevented) return;
 
-      if (!isDisabled && !context.nonInteractive) {
+      if (!(isDisabled || context.nonInteractive)) {
         const currentStepIndex = Array.from(steps.keys()).indexOf(value ?? "");
         const targetStepIndex = Array.from(steps.keys()).indexOf(itemValue);
         const direction = targetStepIndex > currentStepIndex ? "next" : "prev";
@@ -786,13 +781,13 @@ function StepperTrigger(props: ButtonProps) {
       itemValue,
       value,
       steps,
-      propsRef,
-    ],
+      triggerProps.onClick,
+    ]
   );
 
   const onFocus = React.useCallback(
     async (event: React.FocusEvent<TriggerElement>) => {
-      propsRef.current.onFocus?.(event);
+      triggerProps.onFocus?.(event);
       if (event.defaultPrevented) return;
 
       focusContext.onItemFocus(triggerId);
@@ -800,8 +795,7 @@ function StepperTrigger(props: ButtonProps) {
       const isKeyboardFocus = !isMouseClickRef.current;
 
       if (
-        !isActive &&
-        !isDisabled &&
+        !(isActive || isDisabled) &&
         activationMode !== "manual" &&
         !context.nonInteractive &&
         isKeyboardFocus
@@ -826,13 +820,13 @@ function StepperTrigger(props: ButtonProps) {
       itemValue,
       value,
       steps,
-      propsRef,
-    ],
+      triggerProps.onFocus,
+    ]
   );
 
   const onKeyDown = React.useCallback(
     async (event: React.KeyboardEvent<TriggerElement>) => {
-      propsRef.current.onKeyDown?.(event);
+      triggerProps.onKeyDown?.(event);
       if (event.defaultPrevented) return;
 
       if (event.key === "Enter" && context.nonInteractive) {
@@ -874,7 +868,7 @@ function StepperTrigger(props: ButtonProps) {
         } else if (focusIntent === "prev" || focusIntent === "next") {
           if (focusIntent === "prev") candidateRefs.reverse();
           const currentIndex = candidateRefs.findIndex(
-            (ref) => ref.current === event.currentTarget,
+            (ref) => ref.current === event.currentTarget
           );
           candidateRefs = loop
             ? wrapArray(candidateRefs, currentIndex + 1)
@@ -885,15 +879,15 @@ function StepperTrigger(props: ButtonProps) {
           const nextRef = candidateRefs[0];
           const nextElement = nextRef?.current;
           const nextItem = items.find(
-            (item) => item.ref.current === nextElement,
+            (item) => item.ref.current === nextElement
           );
 
           if (nextItem && nextItem.value !== itemValue) {
             const currentStepIndex = Array.from(steps.keys()).indexOf(
-              value || "",
+              value || ""
             );
             const targetStepIndex = Array.from(steps.keys()).indexOf(
-              nextItem.value,
+              nextItem.value
             );
             const direction: NavigationDirection =
               targetStepIndex > currentStepIndex ? "next" : "prev";
@@ -901,7 +895,7 @@ function StepperTrigger(props: ButtonProps) {
             if (direction === "next") {
               const isValid = await store.setStateWithValidation(
                 nextItem.value,
-                direction,
+                direction
               );
               if (!isValid) return;
             } else {
@@ -924,17 +918,17 @@ function StepperTrigger(props: ButtonProps) {
       orientation,
       loop,
       isDisabled,
+      triggerProps.onKeyDown,
       store,
-      propsRef,
       itemValue,
       value,
       steps,
-    ],
+    ]
   );
 
   const onMouseDown = React.useCallback(
     (event: React.MouseEvent<TriggerElement>) => {
-      propsRef.current.onMouseDown?.(event);
+      triggerProps.onMouseDown?.(event);
       if (event.defaultPrevented) return;
 
       isMouseClickRef.current = true;
@@ -945,16 +939,13 @@ function StepperTrigger(props: ButtonProps) {
         focusContext.onItemFocus(triggerId);
       }
     },
-    [focusContext, triggerId, isDisabled, propsRef],
+    [focusContext, triggerId, isDisabled, triggerProps.onMouseDown]
   );
 
   const TriggerPrimitive = asChild ? Slot : "button";
 
   return (
     <TriggerPrimitive
-      id={triggerId}
-      role="tab"
-      type="button"
       aria-controls={contentId}
       aria-current={isActive ? "step" : undefined}
       aria-describedby={`${titleId} ${descriptionId}`}
@@ -962,21 +953,24 @@ function StepperTrigger(props: ButtonProps) {
       aria-selected={isActive}
       aria-setsize={stepCount}
       data-disabled={isDisabled ? "" : undefined}
-      data-state={dataState}
       data-slot="stepper-trigger"
+      data-state={dataState}
       disabled={isDisabled}
+      id={triggerId}
+      role="tab"
       tabIndex={isTabStop ? 0 : -1}
+      type="button"
       {...triggerProps}
-      ref={composedRef}
       className={cn(
         "inline-flex items-center justify-center gap-3 rounded-md text-left outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         "not-has-data-[slot=description]:rounded-full not-has-data-[slot=title]:rounded-full",
-        className,
+        className
       )}
       onClick={onClick}
       onFocus={onFocus}
       onKeyDown={onKeyDown}
       onMouseDown={onMouseDown}
+      ref={composedRef}
     />
   );
 }
@@ -987,7 +981,6 @@ interface StepperIndicatorProps extends Omit<DivProps, "children"> {
 
 function StepperIndicator(props: StepperIndicatorProps) {
   const { className, children, asChild, ref, ...indicatorProps } = props;
-
   const context = useStepperContext(INDICATOR_NAME);
   const itemContext = useStepperItemContext(INDICATOR_NAME);
   const value = useStore((state) => state.value);
@@ -1003,15 +996,15 @@ function StepperIndicator(props: StepperIndicatorProps) {
 
   return (
     <IndicatorPrimitive
-      data-state={dataState}
       data-slot="stepper-indicator"
+      data-state={dataState}
       dir={context.dir}
       {...indicatorProps}
-      ref={ref}
       className={cn(
         "flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-muted bg-background font-medium text-muted-foreground text-sm transition-colors data-[state=active]:border-primary data-[state=completed]:border-primary data-[state=active]:bg-primary data-[state=completed]:bg-primary data-[state=active]:text-primary-foreground data-[state=completed]:text-primary-foreground",
-        className,
+        className
       )}
+      ref={ref}
     >
       {typeof children === "function" ? (
         children(dataState)
@@ -1042,42 +1035,43 @@ function StepperSeparator(props: StepperSeparatorProps) {
   const context = useStepperContext(SEPARATOR_NAME);
   const itemContext = useStepperItemContext(SEPARATOR_NAME);
   const value = useStore((state) => state.value);
-  const steps = useStore((state) => state.steps);
-
   const orientation = context.orientation;
 
+  const steps = useStore((state) => state.steps);
   const stepIndex = Array.from(steps.keys()).indexOf(itemContext.value);
 
   const isLastStep = stepIndex === steps.size - 1;
 
-  if (isLastStep && !forceMount) return null;
+  if (isLastStep && !forceMount) {
+    return null;
+  }
 
   const dataState = getDataState(
     value,
     itemContext.value,
     itemContext.stepState,
     steps,
-    "separator",
+    "separator"
   );
 
   const SeparatorPrimitive = asChild ? Slot : "div";
 
   return (
     <SeparatorPrimitive
-      role="separator"
       aria-hidden="true"
       aria-orientation={orientation}
       data-orientation={orientation}
-      data-state={dataState}
       data-slot="stepper-separator"
+      data-state={dataState}
       dir={context.dir}
+      role="separator"
       {...separatorProps}
-      ref={ref}
       className={cn(
         "bg-border transition-colors data-[state=active]:bg-primary data-[state=completed]:bg-primary",
         orientation === "horizontal" ? "h-px flex-1" : "h-10 w-px",
-        className,
+        className
       )}
+      ref={ref}
     />
   );
 }
@@ -1092,18 +1086,18 @@ function StepperTitle(props: StepperTitleProps) {
   const context = useStepperContext(TITLE_NAME);
   const itemContext = useStepperItemContext(TITLE_NAME);
 
-  const titleId = getId(context.rootId, "title", itemContext.value);
+  const titleId = getId(context.id, "title", itemContext.value);
 
   const TitlePrimitive = asChild ? Slot : "span";
 
   return (
     <TitlePrimitive
-      id={titleId}
       data-slot="title"
       dir={context.dir}
+      id={titleId}
       {...titleProps}
-      ref={ref}
       className={cn("font-medium text-sm", className)}
+      ref={ref}
     />
   );
 }
@@ -1114,22 +1108,21 @@ interface StepperDescriptionProps extends React.ComponentProps<"span"> {
 
 function StepperDescription(props: StepperDescriptionProps) {
   const { className, asChild, ref, ...descriptionProps } = props;
-
   const context = useStepperContext(DESCRIPTION_NAME);
   const itemContext = useStepperItemContext(DESCRIPTION_NAME);
 
-  const descriptionId = getId(context.rootId, "description", itemContext.value);
+  const descriptionId = getId(context.id, "description", itemContext.value);
 
   const DescriptionPrimitive = asChild ? Slot : "span";
 
   return (
     <DescriptionPrimitive
-      id={descriptionId}
       data-slot="description"
       dir={context.dir}
+      id={descriptionId}
       {...descriptionProps}
-      ref={ref}
       className={cn("text-muted-foreground text-xs", className)}
+      ref={ref}
     />
   );
 }
@@ -1152,8 +1145,8 @@ function StepperContent(props: StepperContentProps) {
   const context = useStepperContext(CONTENT_NAME);
   const value = useStore((state) => state.value);
 
-  const contentId = getId(context.rootId, "content", valueProp);
-  const triggerId = getId(context.rootId, "trigger", valueProp);
+  const contentId = getId(context.id, "content", valueProp);
+  const triggerId = getId(context.id, "trigger", valueProp);
 
   if (valueProp !== value && !forceMount) return null;
 
@@ -1161,28 +1154,24 @@ function StepperContent(props: StepperContentProps) {
 
   return (
     <ContentPrimitive
-      id={contentId}
-      role="tabpanel"
       aria-labelledby={triggerId}
       data-slot="stepper-content"
       dir={context.dir}
+      id={contentId}
+      role="tabpanel"
       {...contentProps}
-      ref={ref}
       className={cn("flex-1 outline-none", className)}
+      ref={ref}
     />
   );
 }
 
 function StepperPrev(props: ButtonProps) {
-  const { asChild, onClick: onClickProp, disabled, ...prevProps } = props;
+  const { asChild, disabled, ...prevProps } = props;
 
   const store = useStoreContext(PREV_NAME);
   const value = useStore((state) => state.value);
   const steps = useStore((state) => state.steps);
-
-  const propsRef = useAsRef({
-    onClick: onClickProp,
-  });
 
   const stepKeys = Array.from(steps.keys());
   const currentIndex = value ? stepKeys.indexOf(value) : -1;
@@ -1190,7 +1179,7 @@ function StepperPrev(props: ButtonProps) {
 
   const onClick = React.useCallback(
     async (event: React.MouseEvent<HTMLButtonElement>) => {
-      propsRef.current.onClick?.(event);
+      prevProps.onClick?.(event);
       if (event.defaultPrevented || isDisabled) return;
 
       const prevIndex = Math.max(currentIndex - 1, 0);
@@ -1200,16 +1189,16 @@ function StepperPrev(props: ButtonProps) {
         store.setState("value", prevStepValue);
       }
     },
-    [propsRef, isDisabled, currentIndex, stepKeys, store],
+    [prevProps.onClick, isDisabled, currentIndex, stepKeys, store]
   );
 
   const PrevPrimitive = asChild ? Slot : "button";
 
   return (
     <PrevPrimitive
-      type="button"
       data-slot="stepper-prev"
       disabled={isDisabled}
+      type="button"
       {...prevProps}
       onClick={onClick}
     />
@@ -1217,15 +1206,11 @@ function StepperPrev(props: ButtonProps) {
 }
 
 function StepperNext(props: ButtonProps) {
-  const { asChild, onClick: onClickProp, disabled, ...nextProps } = props;
+  const { asChild, disabled, ...nextProps } = props;
 
   const store = useStoreContext(NEXT_NAME);
   const value = useStore((state) => state.value);
   const steps = useStore((state) => state.steps);
-
-  const propsRef = useAsRef({
-    onClick: onClickProp,
-  });
 
   const stepKeys = Array.from(steps.keys());
   const currentIndex = value ? stepKeys.indexOf(value) : -1;
@@ -1233,7 +1218,7 @@ function StepperNext(props: ButtonProps) {
 
   const onClick = React.useCallback(
     async (event: React.MouseEvent<HTMLButtonElement>) => {
-      propsRef.current.onClick?.(event);
+      nextProps.onClick?.(event);
       if (event.defaultPrevented || isDisabled) return;
 
       const nextIndex = Math.min(currentIndex + 1, stepKeys.length - 1);
@@ -1243,16 +1228,16 @@ function StepperNext(props: ButtonProps) {
         await store.setStateWithValidation(nextStepValue, "next");
       }
     },
-    [propsRef, isDisabled, currentIndex, stepKeys, store],
+    [nextProps.onClick, isDisabled, currentIndex, stepKeys, store]
   );
 
   const NextPrimitive = asChild ? Slot : "button";
 
   return (
     <NextPrimitive
-      type="button"
       data-slot="stepper-next"
       disabled={isDisabled}
+      type="button"
       {...nextProps}
       onClick={onClick}
     />
@@ -1260,7 +1245,19 @@ function StepperNext(props: ButtonProps) {
 }
 
 export {
-  Stepper,
+  StepperRoot as Root,
+  StepperList as List,
+  StepperItem as Item,
+  StepperTrigger as Trigger,
+  StepperIndicator as Indicator,
+  StepperSeparator as Separator,
+  StepperTitle as Title,
+  StepperDescription as Description,
+  StepperContent as Content,
+  StepperPrev as Prev,
+  StepperNext as Next,
+  //
+  StepperRoot as Stepper,
   StepperList,
   StepperItem,
   StepperTrigger,
@@ -1274,5 +1271,5 @@ export {
   //
   useStore as useStepper,
   //
-  type StepperProps,
+  type StepperRootProps as StepperProps,
 };

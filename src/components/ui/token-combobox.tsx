@@ -29,9 +29,10 @@ type TokenComboboxProps = {
     withoutSearch?: boolean;
     className?: ClassValue;
     containerClassName?: ClassValue;
+    searchPlaceholder?: string;
 };
 
-export function TokenCombobox({ value, onChange, options, placeholder = "Select token", withoutSearch = false, className = "", containerClassName = "" }: TokenComboboxProps) {
+export function TokenCombobox({ value, onChange, options, placeholder = "Select token", withoutSearch = false, className = "", containerClassName = "", searchPlaceholder = "Search token..." }: TokenComboboxProps) {
     const [open, setOpen] = React.useState(false);
 
     return (
@@ -42,7 +43,7 @@ export function TokenCombobox({ value, onChange, options, placeholder = "Select 
                         const current = value;
                         const token = options.find((t) => t.value.toLowerCase() === current.toLowerCase());
                         if (!token) {
-                            return <span className="text-sm text-muted-foreground">{placeholder}</span>;
+                            return <span className="text-sm text-primary">{placeholder}</span>;
                         }
                         return (
                             <div className="flex flex-row items-center gap-1 flex-1 [&>svg]:size-5">
@@ -56,7 +57,7 @@ export function TokenCombobox({ value, onChange, options, placeholder = "Select 
             </PopoverTrigger>
             <PopoverContent className={cn("w-fit p-0", containerClassName)}>
                 <Command>
-                    {!withoutSearch && <CommandInput placeholder="Search token..." />}
+                    {!withoutSearch && <CommandInput placeholder={searchPlaceholder} />}
                     <CommandList>
                         {!withoutSearch && (
                             <CommandEmpty>No token found.</CommandEmpty>
