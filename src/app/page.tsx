@@ -13,7 +13,7 @@ export default function HomePage() {
 						<TabsTrigger value="cash-to-fiat-loan">Cash to fiat loan</TabsTrigger>
 					</TabsList>
 
-					<TabsContent value="crypto-to-cash" className="mx-auto max-w-lg">
+					<TabsContent value="crypto-to-cash" className="max-w-lg mx-auto">
 						<CashToCryptoTab />
 					</TabsContent>
 
