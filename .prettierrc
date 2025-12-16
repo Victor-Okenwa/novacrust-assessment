@@ -1,5 +1,0 @@
-{
-  "plugins": ["prettier-plugin-tailwindcss"],
-  "exclude": ["node_modules", "dist", "build", "public", "src/assets"],
-  "semi": true
-}
